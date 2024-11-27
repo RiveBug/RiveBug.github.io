@@ -19,7 +19,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@rive-app/canvas-advanced": "2.21.6"
+    "@rive-app/canvas-advanced": "2.21.6",
+    "jszip": "^3.10.1"
   },
   "devDependencies": {
     "typescript": "latest",

@@ -1,5 +1,5 @@
 import Rive, { RiveCanvas, File, WrappedRenderer, StateMachineInstance, Artboard } from '@rive-app/canvas-advanced';
-
+import JSZip from 'jszip';
 const VERSION = '2.21.6'; //In case you want to test with a different version. Remember to change package.json as well.
 const HIGH_PERFORMANCE_MACHINE = false; // Use this on an M3 or M4, otherwise you won't see any difference. DO NOT use it on lower end machines!
 
@@ -43,7 +43,7 @@ async function main() {
   window.addEventListener('resize', onResizeWindow);
   onResizeWindow();
 
-  rive.requestAnimationFrame(renderLoop);
+  requestAnimationFrame(renderLoop);
 }
 
 function onResizeWindow() {
@@ -79,33 +79,57 @@ function calculateStatistics(data: {ms: number, mouseMoved: boolean}[]) {
   };
 }
 
+let isProcessingClick = false;
+
 function onClick(event : MouseEvent) {
+  if (isProcessingClick) return;
+  isProcessingClick = true;
+
   const stats = calculateStatistics(performanceData);
   console.log('Performance Statistics:', stats);
   console.log(`Performance impact of mouse movement: ${stats.difference.toFixed(2)}ms`);
   console.log(`Mouse moved frames: ${stats.mouseMovedStats.count} (mean: ${stats.mouseMovedStats.mean.toFixed(2)}ms ±${stats.mouseMovedStats.stdDev.toFixed(2)})`);
   console.log(`Static frames: ${stats.mouseNotMovedStats.count} (mean: ${stats.mouseNotMovedStats.mean.toFixed(2)}ms ±${stats.mouseNotMovedStats.stdDev.toFixed(2)})`);
   
-  downloadCSV(performanceData);
+  // Create stats text content
+  const statsText = 
+    `Performance Statistics Summary\n` +
+    `--------------------------------\n` +
+    `Performance impact of mouse movement: ${stats.difference.toFixed(2)}ms\n` +
+    `\nMouse Moved Frames:\n` +
+    `Count: ${stats.mouseMovedStats.count}\n` +
+    `Mean: ${stats.mouseMovedStats.mean.toFixed(2)}ms\n` +
+    `Standard Deviation: ±${stats.mouseMovedStats.stdDev.toFixed(2)}\n` +
+    `\nStatic Frames:\n` +
+    `Count: ${stats.mouseNotMovedStats.count}\n` +
+    `Mean: ${stats.mouseNotMovedStats.mean.toFixed(2)}ms\n` +
+    `Standard Deviation: ±${stats.mouseNotMovedStats.stdDev.toFixed(2)}`;
+
+  // Create CSV content
+  const csvContent = "DrawTime(ms),MouseMoved\n" + 
+    performanceData.map(row => `${row.ms},${row.mouseMoved}`).join("\n");
+
+  // Create zip file
+  const zip = new JSZip();
+  zip.file("performance_data.csv", csvContent);
+  zip.file("statistics.txt", statsText);
+
+  // Generate and download zip
+  zip.generateAsync({type:"blob"}).then(function(content) {
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(content);
+    link.download = "performance_data.zip";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    isProcessingClick = false;
+  });
+
   performanceData = [];
 }
 
 function onMouseMove(event : MouseEvent) {
   mouseMovedThisFrame = true;
-}
-
-function downloadCSV(data: {ms: number, mouseMoved: boolean}[]) {
-  const csvContent = "data:text/csv;charset=utf-8," + 
-    "DrawTime(ms),MouseMoved\n" +
-    data.map(row => `${row.ms},${row.mouseMoved}`).join("\n");
-  
-  const encodedUri = encodeURI(csvContent);
-  const link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
-  link.setAttribute("download", "performance_data.csv");
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
 }
 
 function renderLoop(time : number) {
@@ -149,12 +173,11 @@ function renderLoop(time : number) {
     mouseMoved: mouseMovedThisFrame
   });
 
-  console.log(`Draw time: ${drawTime}ms + Mouse Moved: ${mouseMovedThisFrame}`);
-
   renderer.restore();
-  // Optionally make the below call if using WebGL
-  // renderer.flush()
-  rive.requestAnimationFrame(renderLoop);
+
+  rive.resolveAnimationFrame();
+  
+  requestAnimationFrame(renderLoop);
 
   mouseMovedThisFrame = false;
 }
