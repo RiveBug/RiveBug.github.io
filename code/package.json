@@ -1,0 +1,29 @@
+{
+  "name": "rive-game",
+  "version": "1.0.0",
+  "description": "Bug Report on Artboard.Draw",
+  "targets": {
+    "browsers": {
+      "source": "src/index.html",
+      "includeNodeModules": true,
+      "engines": {
+        "browsers": [
+          "supports es2017"
+        ]
+      }
+    }
+  },
+  "scripts": {
+    "start": "vite",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@rive-app/canvas-advanced": "2.21.6"
+  },
+  "devDependencies": {
+    "typescript": "latest",
+    "vite": "^5.4.11",
+    "vite-plugin-checker": "^0.8.0"
+  }
+}
